@@ -756,6 +756,45 @@ describe('createCollection', () => {
     expect(result).toEqualLeft(TEAM_COLL_TYPE_MISMATCH);
   });
 
+  test('should inherit the parent TeamCollection type when no type is supplied', async () => {
+    const gqlChildTeamCollection = {
+      ...childTeamCollection,
+      type: ReqType.GQL,
+    };
+
+    // parent ownership + type check
+    mockPrisma.teamCollection.findFirst.mockResolvedValueOnce({
+      ...rootTeamCollection,
+      type: ReqType.GQL,
+    });
+    mockPrisma.$transaction.mockImplementationOnce(async (fn) =>
+      fn(mockPrisma),
+    );
+    mockPrisma.$executeRaw.mockResolvedValueOnce(null);
+    mockPrisma.teamCollection.findFirst.mockResolvedValueOnce(null);
+    mockPrisma.teamCollection.create.mockResolvedValueOnce(
+      gqlChildTeamCollection,
+    );
+
+    const result = await teamCollectionService.createCollection(
+      childTeamCollection.teamID,
+      childTeamCollection.title,
+      JSON.stringify(childTeamCollection.data),
+      null,
+      childTeamCollection.parentID,
+    );
+
+    expect(mockPrisma.teamCollection.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ type: ReqType.GQL }),
+      }),
+    );
+    expect(result).toEqualRight({
+      ...childTeamCollectionCasted,
+      type: ReqType.GQL,
+    });
+  });
+
   test('should throw TEAM_COLL_DATA_INVALID when the data is invalid JSON', async () => {
     mockPrisma.teamCollection.findFirst.mockResolvedValueOnce({
       ...rootTeamCollection,

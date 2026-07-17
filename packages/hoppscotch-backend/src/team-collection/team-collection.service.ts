@@ -452,6 +452,10 @@ export class TeamCollectionService {
    *
    * @param teamID The Team ID
    * @param title The title of new TeamCollection
+   * @param data JSON string representing the collection data
+   * @param type The collection type. A child collection always inherits the
+   * type of its parent, so this is only consulted for root collections, where
+   * it defaults to REST
    * @param parentID The parent collectionID (null if root collection)
    * @returns An Either of TeamCollection
    */
@@ -459,22 +463,27 @@ export class TeamCollectionService {
     teamID: string,
     title: string,
     data: string | null = null,
-    type: ReqType,
+    type: ReqType | null = null,
     parentID: string | null,
   ) {
     const isTitleValid = isValidLength(title, this.TITLE_LENGTH);
     if (!isTitleValid) return E.left(TEAM_COLL_SHORT_TITLE);
 
-    // Check that the parent collection belongs to this Team and the child
-    // collection has the same type as its parent
+    let collectionType = type ?? ReqType.REST;
+
+    // Check that the parent collection belongs to this Team, and derive the
+    // child's type from it. A caller may still pass a type, but only one that
+    // agrees with the parent
     if (parentID !== null) {
       const parentCollection = await this.prisma.teamCollection.findFirst({
         where: { id: parentID, teamID },
         select: { type: true },
       });
       if (!parentCollection) return E.left(TEAM_NOT_OWNER);
-      if (parentCollection.type !== type)
+      if (type !== null && type !== parentCollection.type)
         return E.left(TEAM_COLL_TYPE_MISMATCH);
+
+      collectionType = parentCollection.type as ReqType;
     }
 
     if (data === '') return E.left(TEAM_COLL_DATA_INVALID);
@@ -509,7 +518,7 @@ export class TeamCollectionService {
               teamID,
               parentID: parentID ? parentID : undefined,
               data: data ?? undefined,
-              type,
+              type: collectionType,
               orderIndex: lastCollection ? lastCollection.orderIndex + 1 : 1,
             },
           });
