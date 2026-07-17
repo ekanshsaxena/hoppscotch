@@ -668,6 +668,26 @@ describe('findRequestAndNextRequest', () => {
 
     expect(result).toEqualLeft(TEAM_REQ_TYPE_MISMATCH);
   });
+  test('Should resolve left if the source collection does not exist', async () => {
+    mockPrisma.teamRequest.findFirst.mockResolvedValueOnce(dbTeamRequests[0]);
+    // destination collection lookup
+    mockPrisma.teamCollection.findUnique.mockResolvedValueOnce({
+      ...teamCollection,
+      id: 'gql-coll',
+      type: ReqType.GQL,
+    });
+    // source collection lookup
+    mockPrisma.teamCollection.findUnique.mockResolvedValueOnce(null);
+
+    const result = await (teamRequestService as any).findRequestAndNextRequest(
+      teamRequests[0].collectionID,
+      teamRequests[0].id,
+      'gql-coll',
+      null,
+    );
+
+    expect(result).toEqualLeft(TEAM_INVALID_COLL_ID);
+  });
 });
 
 describe('moveRequest', () => {
