@@ -480,7 +480,7 @@ export class TeamCollectionService {
         select: { type: true },
       });
       if (!parentCollection) return E.left(TEAM_NOT_OWNER);
-      if (type !== null && type !== parentCollection.type)
+      if (type != null && type !== parentCollection.type)
         return E.left(TEAM_COLL_TYPE_MISMATCH);
 
       collectionType = parentCollection.type as ReqType;
